@@ -1,7 +1,7 @@
-В trades.xlsx добавляем сделки под шаблону
+В trades.xlsx добавляем сделки под шаблон
 Ticker	Datetime	Open Price	Type
 
-Копипастить сделки можно с Coinlegs, b и s ставим сами ручками
+Копипастить сделки можно с Coinlegs, удалив ненужные столбцы. b и s ставим самостоятельно
 ![image](https://github.com/user-attachments/assets/7c2cb4e0-3cc5-4c02-bda0-e63bef4bf502)
 
 
