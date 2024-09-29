@@ -14,22 +14,42 @@ binance = ccxt.binance({
 utc = pytz.utc
 utc_plus_3 = pytz.timezone('Europe/Moscow')  # UTC+3 временная зона
 
+# Переменная для желаемого Take Profit в процентах
+TAKE_PROFIT_PERCENTAGE = 1.2  # Значение Take Profit в процентах
+
 # Функция для получения исторических данных по тикеру
-def fetch_ohlcv(ticker, since, limit=1500):
+# Функция для получения исторических данных по тикеру
+# Функция для получения исторических данных по тикеру
+def fetch_ohlcv(ticker, since):
     try:
-        data = binance.fetch_ohlcv(ticker, timeframe='1m', since=since, limit=limit)
+        data = []
+        since_timestamp = since  # У нас уже есть значение в миллисекундах
+
+        while True:
+            batch = binance.fetch_ohlcv(ticker, timeframe='15m', since=since_timestamp)
+            if not batch:
+                break  # Если данных больше нет, выходим из цикла
+            
+            # Добавляем данные в общий список
+            data.extend(batch)
+
+            # Обновляем временную метку для следующего запроса
+            since_timestamp = batch[-1][0] + 900000  # Переход к следующей минуте
+
+        # Если нет данных, возвращаем пустой DataFrame
         if len(data) == 0:
-            return pd.DataFrame()  # Возвращаем пустой DataFrame, если нет данных
-        
+            return pd.DataFrame()
+
         df = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        
+
         # Преобразуем timestamp в UTC и затем конвертируем в UTC+3
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True).dt.tz_convert(utc_plus_3)
-        
+
         return df
     except Exception as e:
         print(f"Ошибка при получении данных для {ticker}: {e}")
         return pd.DataFrame()
+
 
 # Функция для расчета Take-Profit и максимального отклонения
 def calculate_take_profit(df, open_price, trade_type):
@@ -37,10 +57,10 @@ def calculate_take_profit(df, open_price, trade_type):
         return None, None
 
     if trade_type == 'Long':  # Long
-        target_price = open_price * 1.012  # +1.2%
+        target_price = open_price * (1 + TAKE_PROFIT_PERCENTAGE / 100)  # +1.2%
         max_opposite_deviation = 0  # Максимальное падение для Long
     else:  # Short
-        target_price = open_price * 0.988  # -1.2%
+        target_price = open_price * (1 - TAKE_PROFIT_PERCENTAGE / 100)  # -1.2%
         max_opposite_deviation = 0  # Максимальный рост для Short
 
     for index, row in df.iterrows():
@@ -105,6 +125,7 @@ for index, trade in enumerate(trades, start=1):
 
     # Проверка, были ли получены данные
     if df.empty:
+        results.append([ticker, open_datetime_str, "Error: No data", trade_type, "N/A"])  # Добавляем ошибку в результаты
         print(f"Не удалось получить данные для {ticker}. Пропускаем сделку.")
         continue  # Переходим к следующей сделке
 
@@ -113,6 +134,7 @@ for index, trade in enumerate(trades, start=1):
 
     # Проверяем, есть ли данные после фильтрации
     if df.empty:
+        results.append([ticker, open_datetime_str, "No data after opening", trade_type, "N/A"])  # Добавляем ошибку в результаты
         print(f"Нет данных для {ticker} после времени открытия сделки. Пропускаем.")
         continue  # Переходим к следующей сделке
 
