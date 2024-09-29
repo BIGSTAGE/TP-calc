@@ -18,8 +18,6 @@ utc_plus_3 = pytz.timezone('Europe/Moscow')  # UTC+3 временная зона
 TAKE_PROFIT_PERCENTAGE = 1.2  # Значение Take Profit в процентах
 
 # Функция для получения исторических данных по тикеру
-# Функция для получения исторических данных по тикеру
-# Функция для получения исторических данных по тикеру
 def fetch_ohlcv(ticker, since):
     try:
         data = []
@@ -49,7 +47,6 @@ def fetch_ohlcv(ticker, since):
     except Exception as e:
         print(f"Ошибка при получении данных для {ticker}: {e}")
         return pd.DataFrame()
-
 
 # Функция для расчета Take-Profit и максимального отклонения
 def calculate_take_profit(df, open_price, trade_type):
@@ -89,11 +86,13 @@ def read_trades_from_excel(file_path):
         ticker = row['Ticker'].strip()  # Удаляем пробелы
         if not ticker.endswith('USDT'):
             ticker += 'USDT'  # Добавляем 'USDT', если его нет
+        trade_type = row['Type'].strip().lower()
         trades.append({
             "ticker": ticker,
             "datetime": row['Datetime'],
             "open_price": row['Open Price'],
-            "type": row['Type'].strip().lower()  # Приводим тип сделки к нижнему регистру
+            # Преобразуем 'Buy' в 'Long', а 'Sell' в 'Short'
+            "type": "Long" if trade_type == 'buy' else "Short"
         })
     return trades
 
@@ -111,7 +110,7 @@ for index, trade in enumerate(trades, start=1):
     ticker = trade['ticker']
     open_datetime_str = trade['datetime']
     open_price = trade['open_price']
-    trade_type = "Long" if trade['type'] == 'b' else "Short"  # Определяем полный тип сделки
+    trade_type = trade['type']  # Теперь это 'Long' или 'Short'
 
     # Преобразуем время открытия сделки из UTC+3 в UTC
     open_datetime_utc_plus_3 = utc_plus_3.localize(datetime.strptime(open_datetime_str, "%d %b %Y %H:%M"))
